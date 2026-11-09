@@ -1,209 +1,249 @@
 #!/usr/bin/env python3
-"""
-Bash benchmark aggregator - Python equivalent of aggregate_benchmark.txt.
+"""Benchmark aggregator for skill evaluation results (Python 3, stdlib only).
 
-Reads tab-separated run.tsv files from subdirectories of an iteration
-directory and computes per-config pass rate, mean ± stddev of tokens and
-duration_ms (sample stddev with n-1 denominator), plus min/max, plus delta
-between configurations.
+Usage:
+    python3 scripts/aggregate_benchmark.py /path/to/<iteration-directory>
 
-Input: every subdirectory of <iteration-directory> containing a run.tsv with
-one line of five tab-separated fields:
+It is a complete Python 3 script and runs
+directly with python3. No extraction, renaming, or assembly step exists.
+
+Input: every direct subdirectory of <iteration-directory> containing a run.tsv
+with records of five tab-separated fields:
     config<TAB>passed<TAB>total<TAB>tokens<TAB>duration_ms
+Each line is one run record; a blank line is a malformed record. run.tsv
+files are read as UTF-8 with a tolerated byte-order mark (utf-8-sig), and
+CRLF line endings are normalized on read; invalid UTF-8 fails closed. Directory names are not word-split;
+test-case pairing verification parses eval-<case>-<config> directory names.
 
-Output (stdout): per config — run count, pass rate, min/max/mean ± stddev of
-tokens and duration_ms — plus the delta between the with_skill and baseline
-configs (or the first two configs found, in discovery order, when differently named).
+Output (stdout): per config — run count, pass rate, mean ± sample standard
+deviation (n - 1) of tokens and duration_ms — plus the delta between the
+with_skill and baseline configs (or the first two configs found, in
+discovery order, when differently named).
+Warnings are printed on stdout; errors are collected and printed on stderr.
+
+Checks:
+  1. The iteration directory exists (a missing directory is an input error).
+  2. At least one run.tsv is found under its direct subdirectories.
+  3. Every run.tsv record has exactly 5 tab-separated fields, fields 2-5 are
+     non-negative integers, passed does not exceed total, and the assertion
+     total is non-zero. The aggregator fails closed: any malformed record,
+     unreadable file, or missing run.tsv fails the whole run; an empty
+     result set is an error, not a pass.
+  4. With two or more configs, test-case pairing is verified from directory
+     names (eval-<case>-<config>): a test case without a counterpart in
+     every configuration produces a warning listing every such case in
+     discovery order, and naming that cannot be parsed produces a warning
+     instead — the evaluation contract in SKILL.md step 2 requires a
+     baseline counterpart for every test case. A single configuration draws
+     a warning instead of a delta: every evaluation needs a baseline.
+
+Analysis judgments — flakiness (variance relative to mean), cross-iteration
+regression comparison, and assertion discrimination — are owned by
+references/analyzer.md and are intentionally not mechanized; this script
+reports the mean ± sample standard deviation that the rubric needs.
 
 Exit codes: 0 = report produced (warnings possible), 1 = input errors found,
-2 = usage error. The aggregator fails closed: any malformed or missing run.tsv
-fails the whole run.
+2 = usage error.
+
+When the documented input format or the computed metrics change, update this
+file in the same step as the methodology documentation in references/.
 """
 
-import json
-import math
 import os
+import re
 import sys
+from math import sqrt
+
+FIELD_COUNT = 5
+NONNEGATIVE = re.compile(r"^[0-9]+$")
+
+ERRORS = []
 
 
-def collect_run_files(iter_dir):
-    """Find all run.tsv files under subdirectories of iter_dir."""
-    runfiles = []
-    if not os.path.isdir(iter_dir):
-        return runfiles
-    for root, dirs, files in os.walk(iter_dir):
-        for fn in files:
-            if fn == "run.tsv":
-                rel = os.path.relpath(root, iter_dir)
-                depth = rel.count(os.sep) + (1 if rel != "." else 0)
-                if depth == 2:
-                    runfiles.append(os.path.join(root, fn))
-    runfiles.sort()
-    return runfiles
+def fail(message):
+    ERRORS.append(message)
 
 
-def parse_run_file(path):
-    """Parse a single run.tsv line into (config, passed, total, tokens, duration_ms)."""
-    try:
-        with open(path, "r", encoding="utf-8-sig") as f:
-            content = f.read().strip()
-    except OSError as e:
-        return None, None, f"cannot read {path}: {e}"
+def report_errors():
+    for message in ERRORS:
+        sys.stderr.write("ERROR: %s\n" % message)
 
-    if not content:
-        return None, None, f"{path}: empty run.tsv"
 
-    lines = content.splitlines()
-    if len(lines) != 1:
-        return None, None, f"{path}: expected exactly 1 line, found {len(lines)}"
-
-    fields = lines[0].split("\t")
-    if len(fields) != 5:
-        return None, None, (
-            f"{path}: expected 5 tab-separated fields, found {len(fields)}"
-        )
-
-    config = fields[0]
-    try:
-        passed = int(fields[1])
-        total = int(fields[2])
-        tokens = int(fields[3])
-        duration_ms = int(fields[4])
-    except ValueError:
-        return None, None, f"{path}: fields 2-5 must be non-negative integers"
-
-    if passed < 0 or total < 0 or tokens < 0 or duration_ms < 0:
-        return None, None, f"{path}: fields 2-5 must be non-negative integers"
-
-    if total == 0:
-        return None, None, f"{path}: assertion total is zero"
-
-    return config, {
-        "passed": passed,
-        "total": total,
-        "tokens": tokens,
-        "duration_ms": duration_ms,
-    }, None
+def warn(message):
+    sys.stdout.write("WARNING: %s\n" % message)
 
 
 def mean(values):
-    return sum(values) / len(values) if values else 0.0
+    return sum(values) / float(len(values))
 
 
-def stddev(values):
-    if len(values) < 2:
+def sample_stddev(values):
+    """Sample standard deviation (n - 1); 0.0 for a single value."""
+    count = len(values)
+    if count < 2:
         return 0.0
-    m = mean(values)
-    var = sum((x - m) ** 2 for x in values) / (len(values) - 1)
-    return math.sqrt(var) if var > 0 else 0.0
+    avg = mean(values)
+    variance = sum((value - avg) ** 2 for value in values) / (count - 1)
+    return sqrt(variance)
 
 
-def aggregate(iter_dir):
-    """Aggregate all run.tsv files under iter_dir and print a report.
+def read_records(path):
+    """Split lines of one run.tsv; fail closed on an unreadable file."""
+    try:
+        with open(path, "r", encoding="utf-8-sig") as handle:
+            text = handle.read()
+    except OSError as exc:
+        fail("could not read %s: %s" % (path, exc))
+        return []
+    except UnicodeDecodeError as exc:
+        fail("%s: not valid UTF-8 (%s)" % (path, exc))
+        return []
+    return text.splitlines()
 
-    Returns (exit_code, report_string).
-    """
-    errors = []
-    runfiles = collect_run_files(iter_dir)
 
-    if not runfiles:
-        return 1, f"ERROR: no run.tsv files found under: {iter_dir}"
+def note_pairing(dir_name, config, parsed_configs, case_order,
+                 case_configs):
+    """Record eval-<case>-<config> pairing for one record's directory."""
+    marker = "-" + config
+    if len(dir_name) > len(marker) and dir_name.endswith(marker):
+        key = dir_name[:len(dir_name) - len(marker)]
+        if key.startswith("eval-"):
+            key = key[5:]
+        if not key:
+            return  # "eval-<config>" has no case segment; unparseable
+        parsed_configs.add(config)
+        if key not in case_configs:
+            case_configs[key] = set()
+            case_order.append(key)
+        case_configs[key].add(config)
 
-    configs = {}
-    order = []
 
-    for rf in runfiles:
-        config, fields, err = parse_run_file(rf)
-        if err:
-            errors.append(err)
-            continue
-        if config not in configs:
-            configs[config] = {
-                "passed": 0,
-                "total": 0,
-                "runs": 0,
-                "tokens": [],
-                "duration": [],
-            }
-            order.append(config)
-        c = configs[config]
-        c["passed"] += fields["passed"]
-        c["total"] += fields["total"]
-        c["runs"] += 1
-        c["tokens"].append(fields["tokens"])
-        c["duration"].append(fields["duration_ms"])
+def print_report(runs, config_order):
+    sys.stdout.write(
+        "%-16s %5s  %7s  %s  %s\n"
+        % ("config", "runs", "pass%", "tokens (mean±sd)",
+           "duration_ms (mean±sd)"))
+    for config in config_order:
+        record = runs[config]
+        count = len(record["tokens"])
+        sys.stdout.write(
+            "%-16s %5d  %6.1f%%  %7.0f ± %-7.0f  %7.0f ± %-7.0f\n"
+            % (config, count, 100.0 * record["passed"] / record["total"],
+               mean(record["tokens"]), sample_stddev(record["tokens"]),
+               mean(record["durations"]),
+               sample_stddev(record["durations"])))
 
-    if errors:
-        return 1, "\n".join(errors)
 
-    if not order:
-        return 1, "ERROR: no valid runs"
-
-    lines = []
-    header = (
-        "{:<16} {:>5}  {:>7}  {:<22}  {:<26}".format(
-            "config", "runs", "pass%",
-            "tokens (min/max/mean±sd)", "duration_ms (min/max/mean±sd)"
-        )
-    )
-    lines.append(header)
-
-    for config in order:
-        c = configs[config]
-        pr = 100.0 * c["passed"] / c["total"] if c["total"] else 0.0
-        mt = mean(c["tokens"])
-        st = stddev(c["tokens"])
-        tmin = min(c["tokens"])
-        tmax = max(c["tokens"])
-        md = mean(c["duration"])
-        sd = stddev(c["duration"])
-        dmin = min(c["duration"])
-        dmax = max(c["duration"])
-        lines.append(
-            "{:<16} {:>5}  {:>6.1f}%  {:>4}/{:<4}/{:>6.0f} ± {:<6.0f}  {:>5}/{:<5}/{:>7.0f} ± {:<7.0f}".format(
-                config, c["runs"], pr, tmin, tmax, mt, st, dmin, dmax, md, sd
-            )
-        )
-
-    if len(order) == 1:
-        lines.append(
-            "WARNING: single configuration found; no delta computed "
-            "— every evaluation needs a baseline."
-        )
-        return 0, "\n".join(lines)
-
-    if "with_skill" in configs and "baseline" in configs:
-        a, b = "with_skill", "baseline"
+def print_delta(runs, config_order):
+    if "with_skill" in runs and "baseline" in runs:
+        first, second = "with_skill", "baseline"
     else:
-        a, b = order[0], order[1]
-
-    ca = configs[a]
-    cb = configs[b]
-    delta_pass = 100.0 * ca["passed"] / ca["total"] - 100.0 * cb["passed"] / cb["total"]
-    delta_tokens = mean(ca["tokens"]) - mean(cb["tokens"])
-    delta_duration = mean(ca["duration"]) - mean(cb["duration"])
-
-    lines.append("")
-    lines.append(f"Delta ({a} vs {b}):")
-    lines.append(f"  pass rate:   {delta_pass:+.1f} percentage points")
-    lines.append(f"  tokens:      {delta_tokens:+.0f} mean per run")
-    lines.append(f"  duration:   {delta_duration:+.0f} ms mean per run")
-
-    return 0, "\n".join(lines)
+        first, second = config_order[0], config_order[1]
+    sys.stdout.write("\nDelta (%s vs %s):\n" % (first, second))
+    sys.stdout.write(
+        "  pass rate:   %+.1f percentage points\n"
+        % (100.0 * (runs[first]["passed"] / float(runs[first]["total"])
+                    - runs[second]["passed"]
+                    / float(runs[second]["total"]))))
+    sys.stdout.write("  tokens:      %+.0f mean per run\n"
+                     % (mean(runs[first]["tokens"])
+                        - mean(runs[second]["tokens"])))
+    sys.stdout.write("  duration:   %+.0f ms mean per run\n"
+                     % (mean(runs[first]["durations"])
+                        - mean(runs[second]["durations"])))
 
 
 def main():
     if len(sys.argv) != 2:
-        print(
-            "Usage: python aggregate_benchmark.py /path/to/<iteration-directory>",
-            file=sys.stderr,
-        )
+        sys.stderr.write(
+            "Usage: python3 scripts/aggregate_benchmark.py "
+            "/path/to/<iteration-directory>\n")
         return 2
-
     iter_dir = sys.argv[1]
-    exit_code, report = aggregate(iter_dir)
-    print(report)
-    return exit_code
+    if not os.path.isdir(iter_dir):
+        fail("iteration directory not found: %s" % iter_dir)
+        report_errors()
+        return 1
+    try:
+        entries = sorted(os.listdir(iter_dir))
+    except OSError as exc:
+        fail("could not list %s: %s" % (iter_dir, exc))
+        report_errors()
+        return 1
+    run_files = []
+    for entry in entries:
+        subdir = os.path.join(iter_dir, entry)
+        path = os.path.join(subdir, "run.tsv")
+        if os.path.isdir(subdir) and os.path.isfile(path):
+            run_files.append((path, entry))
+    if not run_files:
+        fail("no run.tsv files found under: %s" % iter_dir)
+        report_errors()
+        return 1
+
+    runs = {}               # config -> {"passed", "total", "tokens",
+                            #            "durations"}
+    config_order = []       # configs in discovery order
+    parsed_configs = set()  # configs with a parsed eval-dir name
+    case_order = []         # unique test-case keys in discovery order
+    case_configs = {}       # case key -> configs it appears in
+
+    for path, dir_name in run_files:
+        for line in read_records(path):
+            fields = line.split("\t")
+            if len(fields) != FIELD_COUNT:
+                fail("%s: expected %d tab-separated fields, found %d"
+                     % (path, FIELD_COUNT, len(fields)))
+                continue
+            config = fields[0]
+            numbers = fields[1:]
+            if not all(NONNEGATIVE.match(field) for field in numbers):
+                fail("%s: fields 2-5 must be non-negative integers" % path)
+                continue
+            passed, total, tokens, duration = (int(field)
+                                               for field in numbers)
+            if passed > total:
+                fail("%s: passed (%d) exceeds total (%d)"
+                     % (path, passed, total))
+                continue
+            if total == 0:
+                fail("%s: assertion total is zero" % path)
+                continue
+            record = runs.setdefault(config, {"passed": 0, "total": 0,
+                                              "tokens": [],
+                                              "durations": []})
+            record["passed"] += passed
+            record["total"] += total
+            record["tokens"].append(tokens)
+            record["durations"].append(duration)
+            if config not in config_order:
+                config_order.append(config)
+            note_pairing(dir_name, config, parsed_configs, case_order,
+                         case_configs)
+
+    if ERRORS:
+        report_errors()
+        return 1
+    if not config_order:
+        fail("no valid runs")
+        report_errors()
+        return 1
+    print_report(runs, config_order)
+    if len(config_order) == 1:
+        warn("single configuration found; no delta computed — every "
+             "evaluation needs a baseline.")
+        return 0
+    if not case_order or len(parsed_configs) < len(config_order):
+        warn("test-case pairing could not be verified from directory "
+             "names (expected eval-<case>-<config>).")
+    else:
+        missing = [key for key in case_order
+                   if len(case_configs[key]) < len(config_order)]
+        if missing:
+            warn("test cases without a counterpart in every "
+                 "configuration: " + ", ".join(missing))
+    print_delta(runs, config_order)
+    return 0
 
 
 if __name__ == "__main__":

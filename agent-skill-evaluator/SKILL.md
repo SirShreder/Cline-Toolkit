@@ -1,12 +1,10 @@
 ---
 name: agent-skill-evaluator
-description: Load when an agent skill must be proven to help — with-skill versus
-  baseline runs, evidence-graded assertions, pass-rate/token/time benchmarking,
-  and description trigger-rate optimization. Use when the user asks to "test
-  this skill", "run evals", "benchmark skill performance", "improve skill
-  triggering", or asks whether a skill actually helps — also after a skill is
-  created or edited and the user wants proof it works. Not for structural
-  validation or generic code testing.
+description: Load when an agent skill must be proven to help. Use when the user
+  asks to "test this skill", "run evals", "benchmark skill performance",
+  "improve skill triggering", or asks whether a skill actually helps — also
+  after a skill is created or edited and the user wants proof it works. Not for
+  structural validation or generic code testing.
 ---
 # Skill: Agent Skill Evaluator
 
@@ -35,12 +33,12 @@ A skill earns its context cost only if it measurably outperforms the model witho
 3. **Run All Configurations in One Batch:** Execute every test case in every configuration before any grading starts — parallel fresh subagents where the runtime supports them, sequential inline runs where it does not. Record outputs, token count, and duration per run, immediately: run notifications are not persisted elsewhere.
 4. **Draft Assertions While Runs Execute:** Write objectively verifiable expectations with descriptive names, per the schema in `references/METHOD.md`. Do not force assertions on subjective skills.
 5. **Grade with the Grading Rubric:** Apply `references/grader.md` — verdict per assertion with recorded evidence, mechanical checks preferred over eyeballing.
-6. **Aggregate the Benchmark:** Extract the embedded script after the cut-here marker into a temporary file. Run it against the iteration directory — pass rate per configuration, mean ± sample standard deviation of tokens and duration, and the delta between configurations. The script fails closed. It warns when a test case lacks a counterpart in every configuration.
+6. **Aggregate the Benchmark:** Run the bundled aggregator against the iteration directory with `python3 scripts/aggregate_benchmark.py <iteration-directory>`. It reports pass rate per configuration, mean ± sample standard deviation of tokens and duration, and the delta between configurations. The script fails closed. It warns when a test case lacks a counterpart in every configuration.
 7. **Analyze the Benchmark:** Apply `references/analyzer.md` to the benchmark — discard non-discriminating assertions, flag flaky cases, and weigh pass-rate gain against token and time cost.
 8. **Compare Outputs:** Apply `references/comparator.md` to the outputs.
 9. **Human Review Before Revision:** Show the user the outputs and the benchmark, and collect per-case feedback. Empty feedback means acceptable. Never revise based only on the author-agent's own judgment.
-10. **Iterate Without Overfitting:** Improve the skill from the feedback by generalizing from the failure class, not by patching the exact examples; re-run the set. Before each re-run, re-apply the structural validation and content audit owned by the `agent-skill-architect` skill. When a revision moves code examples, patterns, or templates out of SKILL.md, apply the layer-placement contract owned by the `agent-skill-architect` skill (code read to reason in `references/`, code copied verbatim in `assets/` or `templates/`, executable code in `scripts/`, always as a concrete relative path with a load trigger). When it passes, expand the test set with new cases and re-run at larger scale.
-11. **Optimize the Description When Triggering Is the Concern:** Build a query set — half should-trigger, half near-miss, all substantive — split into train and held-out portions, run each query several times per candidate description, and select the winner by held-out score. Apply it to the frontmatter and report before and after. The loop is specified in `references/METHOD.md`.
+10. **Iterate Without Overfitting:** Improve the skill from the feedback by generalizing from the failure class, not by patching the exact examples. Re-run the set. Before each re-run, re-apply the structural validation and content audit owned by the `agent-skill-architect` skill. When that skill is absent, hold the change to the portable minimum: re-read the changed files and verify their frontmatter and referenced paths on disk. When a revision moves code examples, patterns, or templates out of SKILL.md, apply the layer-placement contract owned by the `agent-skill-architect` skill (code read to reason in `references/`, code copied verbatim in `assets/` or `templates/`, executable code in `scripts/`, always as a concrete relative path with a load trigger). When it passes, expand the test set with new cases and re-run at larger scale.
+11. **Optimize the Description When Triggering Is the Concern:** Build a query set — half should-trigger, half near-miss, all substantive. Split it into train and held-out portions. Run each query several times per candidate description. Select the winner by held-out score. Apply the winning description to the frontmatter. Report the before-and-after scores. The loop is specified in `references/METHOD.md`.
 
 ## Per-Runtime Execution Notes
 
@@ -55,7 +53,7 @@ A skill earns its context cost only if it measurably outperforms the model witho
 - `references/comparator.md` — output-comparison rubric. Read it when comparing configurations qualitatively.
 - `references/analyzer.md` — benchmark-analysis rubric. Read it after aggregation.
 - `references/FRAMEWORKS.md` — external evaluation frameworks (Promptfoo, Ragas, TruLens) and official authoring guides on evaluation and description optimization. Read it when choosing tooling for large-scale or automated evaluation.
-- `scripts/aggregate_benchmark.py` — fail-closed benchmark aggregator for skill evaluation results: reads tab-separated `run.tsv` files (fields `config<TAB>passed<TAB>total<TAB>tokens<TAB>duration_ms`) from subdirectories of an iteration directory; prints per-config run count, pass rate, mean ± stddev of tokens and duration_ms; computes delta between configurations. Fails closed on malformed input.
+- `scripts/aggregate_benchmark.py` — Python 3 benchmark aggregator, run directly with `python3`. When the documented input format or computed metrics change, update this file in the same step as the methodology documentation.
 - Complete inventory: `SKILL.md`, `references/METHOD.md`, `references/grader.md`, `references/comparator.md`, `references/analyzer.md`, `references/FRAMEWORKS.md`, `scripts/aggregate_benchmark.py` — nothing else.
 
 ## Completion Criteria

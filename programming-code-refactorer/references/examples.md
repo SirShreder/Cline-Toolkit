@@ -4,6 +4,7 @@ TypeScript code examples referenced from `SKILL.md`.
 
 ## Single Responsibility Principle (SRP)
 
+```typescript
 // ❌ God class doing everything
 class UserService {
   createUser(data) { /* ... */ }
@@ -29,8 +30,10 @@ class CRMService {
   syncUser(user) { /* ... */ }
 }
 
+```
 ## Open/Closed Principle (OCP)
 
+```typescript
 // ❌ Must modify to add new discount types
 function calculateDiscount(order, type) {
   if (type === 'percentage') return order.total * 0.1;
@@ -65,8 +68,10 @@ class LoyaltyDiscount implements Discount {
   }
 }
 
+```
 ## Liskov Substitution Principle (LSP)
 
+```typescript
 // ❌ Square violates Rectangle's contract
 class Rectangle {
   setWidth(w) { this.width = w; }
@@ -94,8 +99,10 @@ class Shape {
 class Rectangle extends Shape { /* independent width/height */ }
 class Square extends Shape { /* single side */ }
 
+```
 ## Interface Segregation Principle (ISP)
 
+```typescript
 // ❌ Fat interface
 interface Worker {
   work(): void;
@@ -125,8 +132,10 @@ class Human implements Workable, Eatable, Sleepable {
   sleep() { /* ... */ }
 }
 
+```
 ## Dependency Inversion Principle (DIP)
 
+```typescript
 // ❌ High-level module depends on low-level module
 class OrderService {
   private emailService = new SMTPEmailService();
@@ -156,8 +165,10 @@ new OrderService(new SESEmailService());
 new OrderService(new SendGridEmailService());
 new OrderService(new MockEmailService());  // Testing!
 
+```
 ## Strategy Pattern
 
+```typescript
 // ❌ Growing switch statement
 function calculateShipping(order, method) {
   switch (method) {
@@ -188,8 +199,10 @@ function calculateShipping(order: Order, method: string): number {
   return strategy.calculate(order);
 }
 
+```
 ## Extract Method
 
+```typescript
 // ❌ Long method with embedded logic
 function printOwing(invoice) {
   // Print banner
@@ -230,8 +243,10 @@ function printDetails(invoice: Invoice, outstanding: number) {
   console.log(`amount: ${outstanding}`);
 }
 
+```
 ## Replace Conditional with Polymorphism
 
+```typescript
 // ❌ Type-checking conditionals
 function getEmployeePay(employee) {
   switch (employee.type) {
@@ -261,8 +276,10 @@ class ContractorEmployee extends Employee {
 
 // New types don't require modifying existing code
 
+```
 ## Memoization and Lazy Initialization
 
+```typescript
 // Memoization
 function memoize<T extends (...args: any[]) => any>(fn: T): T {
   const cache = new Map<string, ReturnType<T>>();
@@ -287,8 +304,10 @@ class ExpensiveResource {
   }
 }
 
+```
 ## Deprecated Function
 
+```typescript
 /**
  * @deprecated Use calculateV2() instead. Will be removed in v3.0.
  */
@@ -296,3 +315,4 @@ function calculateV1(data: Data): number {
   console.warn('calculateV1 is deprecated. Use calculateV2.');
   return calculateV2(data);
 }
+```

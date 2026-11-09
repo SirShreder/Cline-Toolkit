@@ -1,8 +1,11 @@
 ---
-name: code-refactorer
-description: Code refactoring guide covering design patterns, SOLID principles, dead code elimination, performance optimization, and safe refactoring workflows. This skill should be used when restructuring existing code, applying design patterns, reducing technical debt, improving code maintainability, or performing safe incremental refactoring.
+name: programming-code-refactorer
+description: Use when restructuring existing code, applying design patterns,
+  reducing technical debt, improving code maintainability, or performing safe
+  incremental refactoring. The same verified, incremental workflow governs every
+  change, whether restructuring around the SOLID principles, eliminating dead
+  code, or optimizing performance from measurements.
 ---
-
 # Code Refactorer
 
 This skill provides structured guidance for refactoring code safely and effectively, covering design patterns, SOLID principles, dead code elimination, and incremental transformation workflows.
@@ -22,6 +25,12 @@ This skill provides structured guidance for refactoring code safely and effectiv
 - Improving performance through code optimization
 - Making code more maintainable and readable
 
+## When NOT to Use This Skill
+
+- There is no existing code to restructure — write new code directly
+- The task requires a behavior change — separate it from refactoring and never mix the two
+- The test suite is red — fix the failing tests first, then refactor
+
 ## Refactoring Workflow
 
 ### The Golden Rule
@@ -31,6 +40,7 @@ This skill provides structured guidance for refactoring code safely and effectiv
 2. Change one thing at a time
 3. Be independently committable
 4. Be reversible if something goes wrong
+5. Be complete and runnable — no placeholder bodies in the code you write
 
 ### Step-by-Step Process
 
@@ -85,7 +95,7 @@ Depend on abstractions, not concretions.
 
 ## Design Patterns
 
-See `references/examples.md` for code examples.
+When applying a design pattern or working through a SOLID principle in a code change, read `references/examples.md` for the TypeScript-illustrated form before editing.
 
 ## Dead Code Elimination
 
@@ -119,7 +129,7 @@ Profile before optimizing using the profiling tools appropriate to your language
 | **Indexing** | Repeated searches in collections | O(n) → O(1) lookups |
 | **Pagination** | Large data sets | Process/display subsets |
 
-## Error Handling
+## Common Mistakes and Stopping Conditions
 
 ### Common Refactoring Mistakes
 
@@ -147,13 +157,14 @@ Profile before optimizing using the profiling tools appropriate to your language
 - Characterization tests (tests that document current behavior) are valid even if the current behavior is imperfect — lock it down before changing it
 - Flag new technical debt: `// TODO(refactor): extract validation logic` — makes it findable later
 - Refactoring is not a phase — it's a continuous activity woven into feature work
+- After each verified step, run the static-analysis and testing gates owned by the `programming-rules` skill when it is installed
 
 ## Testing Patterns
 
-See `references/testing.md` for concise testing patterns per SOLID principle.
+When planning tests for a change that touches a SOLID boundary, read `references/testing.md` for the matching test-per-principle pattern.
 
-## Cline Workflow Notes
+## Relationship to `programming-code-review`
 
-1. **Install location**: Copy this skill directory to `.cline/skills/code-refactorer/` (project-level) or `~/.cline/skills/code-refactorer/` (global)
-2. **Activation**: Cline will suggest this skill when you request code restructuring, pattern application, or technical debt reduction
-3. **Progressive loading**: Metadata is always in context; detailed refactoring patterns load on demand via `use_skill`
+- The `programming-code-review` skill, when it is installed, decides **what** needs to change — it issues a severity-ranked verdict.
+- This skill applies **how** to change it safely — incremental, test-verified steps, each independently committable.
+- After this skill applies changes, re-run the `programming-code-review` skill when it is installed to verify the verdict moves to APPROVED.

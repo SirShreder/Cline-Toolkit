@@ -1,10 +1,20 @@
 # Reference: Runtime and Model Compatibility
 
-Read this file when a generated or reviewed skill must work across different AI models and agent runtimes (Mistral Vibe, ChatGPT/Codex, DeepSeek tooling, Cline, or any skills-compatible client). All rules below are taken from the vendors' official documentation — verify against the linked sources before relying on details, since runtimes evolve.
+Read this file when a generated or reviewed skill must work across different AI models and agent runtimes (Claude Code, Mistral Vibe, ChatGPT/Codex, DeepSeek tooling, Cline, or any skills-compatible client). All rules below are taken from the vendors' official documentation — verify against the linked sources before relying on details, since runtimes evolve.
 
 ## Universal baseline: the open Agent Skills standard
 
-All four vendors below adopted the open [Agent Skills standard](https://agentskills.io/home) (originally developed by Anthropic). The portable core is: a folder with a `SKILL.md` file containing YAML frontmatter (`name`, `description`) plus instructions, loaded through progressive disclosure — discovery (name + description only), activation (full `SKILL.md`), execution (referenced files and scripts on demand). A skill that passes the standard's format rules works structurally on every runtime; runtime-specific behavior is where the checks below matter.
+All five vendors below adopted the open [Agent Skills standard](https://agentskills.io/home) (originally developed by Anthropic). The portable core is: a folder with a `SKILL.md` file containing YAML frontmatter (`name`, `description`) plus instructions, loaded through progressive disclosure — discovery (name + description only), activation (full `SKILL.md`), execution (referenced files and scripts on demand). A skill that passes the standard's format rules works structurally on every runtime; runtime-specific behavior is where the checks below matter.
+
+## Claude Code — Anthropic
+
+Source: [Extend agents with skills — Claude Code Docs](https://code.claude.com/docs/en/agent-sdk/skills)
+
+- Skills are packaged as `SKILL.md` files (instructions, description, and optional supporting resources), one directory per skill.
+- Discovery locations: `~/.claude/skills/` (user) and `.claude/skills/` (project), including `.claude/skills/` in every parent directory up to the repository root.
+- Invocation is model-driven — Claude invokes a skill when the request matches its description — or explicit via the `/<skill-name>` slash command.
+- In Agent SDK sessions, the `skills` option scopes which discovered skills Claude may invoke; by default every discovered skill is enabled.
+- Skills are filesystem artifacts: there is no programmatic registration API, so authoring means writing the files on disk.
 
 ## Mistral — Vibe Work
 
@@ -55,17 +65,17 @@ Source: [Skills — Cline docs](https://docs.cline.bot/customization/skills)
 - Naming: kebab-case, descriptive (`aws-cdk-deploy`, not `aws`, `my_skill`, or `DeployToAWS`).
 - Descriptions: start with action verbs, include trigger phrases and specific file types, tools, or domains; test with varied phrasings of real requests.
 - Cline reads `SKILL.md` sequentially — front-load the common cases and use clear section headers so it can scan for relevant sections.
-- Skills differ from rules (always active) by loading on demand; skills are enabled by default and can be toggled. [Cline](https://cline.ghost.io/) added Agent Skills compatibility, so existing skills built for other clients work in Cline.
+- Skills differ from rules (always active) by loading on demand; skills are enabled by default and can be toggled. Recent Cline releases added Agent Skills compatibility, so existing skills built for other clients work in Cline.
 
 ## Cross-runtime compatibility checklist
 
-Apply this when one skill package targets multiple runtimes or models. The bundled structural validator (`scripts/validate_skill.py`) enforces the mechanical parts automatically — kebab-case naming, name/directory matching, the 1024-character description limit, Ghost File Rule resolution across the `references/`, `scripts/`, `assets/`, `docs/`, and `templates/` layouts, and warnings for the 500-character catalog cap and the 500-line body budget. The judgement calls (install locations, name-conflict behavior, load-bearing frontmatter) remain manual:
+Apply this when one skill package targets multiple runtimes or models. The bundled structural validator (`scripts/validate_skill.py`) enforces the mechanical parts automatically — kebab-case naming, name/directory matching, the 1024-character description limit, Ghost File Rule resolution across the `references/`, `scripts/`, `assets/`, `docs/`, and `templates/` layouts, and warnings for the 500-character catalog cap, the 500-line body budget, and referenced paths that use parent-relative '..' segments, which skip existence checking, or nest deeper than one level (the single-level-deep path contract). The judgement calls (install locations, name-conflict behavior, load-bearing frontmatter) remain manual:
 
 1. **name**: kebab-case, matches the directory name exactly, ≤ 64 characters, unique within and across installation scopes.
-2. **description**: ≤ 1024 characters; front-load the key use case and trigger words; keep it as short as possible — the DeepSeek harness session catalog hard-caps descriptions at 500 by default, and the bundled validator warns above 500. State when to use the skill, not what it is.
+2. **description**: ≤ 1024 characters; front-load the key use case and trigger words; keep it as short as possible — the DeepSeek harness session catalog caps descriptions at 500 by default (catalogDescriptionMaxLength, configurable), and the bundled validator warns above 500. State when to use the skill, not what it is.
 3. **SKILL.md body**: under 5k tokens (Cline's budget) and roughly 5,000 tokens as the general guidance; push detail into referenced files.
 4. **File paths**: single-level-deep relative links that resolve inside the package; every referenced file exists (Ghost File Rule). Avoid instructing agents to use runtime-specific subfolder names in prose — reference actual files instead.
-5. **Install locations**: document the right path per runtime (`.agents/skills` for Codex and DeepSeek tooling, `.cline/skills/` for Cline, Mistral's Skills editor for Vibe) without asserting them inside the skill body.
+5. **Install locations**: document the right path per runtime (`~/.claude/skills/` for Claude Code, `.agents/skills` for Codex and DeepSeek tooling, `.cline/skills/` for Cline, Mistral's Skills editor for Vibe) without asserting them inside the skill body.
 6. **Name conflicts**: Codex lists both duplicates, Cline lets the global skill win, DeepSeek harness lets the nearest layer win — never rely on shadowing; ship unique names.
 7. **Scripts**: self-contained, non-interactive, with output-only context cost (works everywhere); pin one-off commands.
-8. **Frontmatter**: only `name` and `description` are honored universally; runtime-specific extras (e.g. `disable-model-invocation`) are ignored elsewhere, so never put critical instructions into frontmatter keys.
+8. **Frontmatter**: only `name` and `description` are honored universally; runtime-specific extras (e.g. `disable-model-invocation`) are ignored elsewhere, so never put critical instructions into frontmatter keys. The specification's optional `compatibility` field is the one optional key the bundled validator shape-checks: a single string of at most 500 characters stating environment requirements (intended product, system packages, network access) — per the [format specification](https://agentskills.io/specification). The remaining optional keys (`license`, `allowed-tools`, `metadata`) are whitelisted but not shape-checked.

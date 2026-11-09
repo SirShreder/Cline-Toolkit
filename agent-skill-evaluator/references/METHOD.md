@@ -22,7 +22,7 @@ Put results in `<skill-name>-workspace/` as a sibling of the skill directory, or
     ...
 ```
 
-Name each eval directory after what it tests, not after its index. Use hyphens, not whitespace: the aggregator splits file lists on whitespace. Create directories as runs complete, not upfront. Keep prior iterations in place for cross-iteration comparison.
+Name each eval directory after what it tests, not after its index, as `eval-<case>-<config>`: the aggregator's pairing verification parses that shape. Create directories as runs complete, not upfront. Keep prior iterations in place for cross-iteration comparison.
 
 ## run.tsv
 
@@ -32,7 +32,7 @@ Written by the grader after grading, one line of five tab-separated fields:
 config<TAB>passed<TAB>total<TAB>tokens<TAB>duration_ms
 ```
 
-`config` is `with_skill` or `baseline` (or the snapshot's name for improvement runs). `tokens` and `duration_ms` come from the runtime's run notification where one exists; record them immediately, they are not persisted elsewhere. Where the runtime provides no notification, record 0 and note the absence in the report.
+`config` is `with_skill` or `baseline` (or the snapshot's name for improvement runs). `tokens` and `duration_ms` come from the runtime's run notification where one exists; record them immediately, they are not persisted elsewhere. Where the runtime provides no notification, record 0 and note the absence in the report. The aggregator reads run.tsv as UTF-8, tolerating a leading byte-order mark and CRLF line endings.
 
 ## grading.json
 

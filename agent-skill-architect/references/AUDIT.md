@@ -6,14 +6,14 @@ The audit is semantic, not mechanical: it requires the file's invariants derived
 
 ## Checklist
 
-1. **Incorrect or outdated data:** every factual claim, limit, and behavior statement matches its authoritative source; where a claim depends on changeable facts, verify it externally before accepting it (per the anti-hallucination rules in `ai-core-rules` Section 3).
-2. **Circular references:** every reference chain terminates at one authoritative location; no loop between files (per `ai-core-rules` Section 1).
-3. **Duplicated content:** nothing restates a rule owned by another section or skill; other files may reference the owning location, never restate it.
+1. **Incorrect or outdated data:** every factual claim, limit, and behavior statement matches its authoritative source; where a claim depends on changeable facts, verify it externally before accepting it.
+2. **Circular references:** every reference chain terminates at one authoritative location; no loop between files.
+3. **Duplicated content:** nothing restates a rule owned by another section of the package; other files may reference the owning location, never restate it.
 4. **Conflicting rules:** no two rules inside the change set contradict each other.
 5. **Missing required sections:** the file contains every section its contract requires.
 6. **Ambiguous wording:** every rule has exactly one reading; no indefinite referents or undefined terms.
 7. **Overlapping responsibilities:** the skill's scope and activation triggers do not overlap another skill's; duplicate task ownership is a finding.
-8. **Priority and order conflicts:** rule priorities and workflow step ordering stay consistent; resolve any conflict per the priority chain in `ai-core-rules` Section 7, never by restating the other rule.
+8. **Priority and order conflicts:** rule priorities and workflow step ordering stay consistent; resolve any conflict by the priority chain — the more specific rule wins, and a still-ambiguous case goes to the user — never by restating the other rule.
 9. **Unused or dead content:** no orphaned bullets, unused enumerations, or content that no instruction or step references.
 10. **Formatting and schema errors:** markdown structure, YAML frontmatter, and directory layout follow their contracts.
 11. **Contradictions with higher-priority rules:** nothing in the change contradicts a higher-priority rule or instruction.
@@ -25,6 +25,7 @@ The audit is semantic, not mechanical: it requires the file's invariants derived
 17. **Unnecessary cross-references:** replace a cross-reference with short self-contained guidance where the target does not own the rule; reference only what another file owns.
 18. **Version references:** files contain no specific product or model version numbers unless the user requested them directly; generalize to version-independent phrasing. Exception: version facts that document a runtime or tool the user explicitly targets are compatibility facts, not stale-prone claims — keep them where they carry load-bearing information.
 19. **Description-to-body fidelity:** every trigger context in the frontmatter description corresponds to a capability the body actually performs, every major body capability is reachable from at least one description trigger, and the description's exclusions match the body's exclusions section.
+20. **External references and dependencies:** every external link, tool, or skill the package names carries a stated purpose and traces to an official source or a dependency present in the environment. An external reference the change set cannot verify is a finding.
 
 ## Layer Ownership
 

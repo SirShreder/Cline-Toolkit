@@ -25,6 +25,7 @@ To check a skill against a specific AI model or agent runtime, read `references/
 - [DeepSeek — deepseek-harness skills subsystem](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/skills.md) — DeepSeek's official agent harness: skill identity rules, discovery priority and roots, invocation-policy frontmatter, and the session catalog with its description cap.
 - [DeepSeek — Deep Code integration](https://github.com/deepseek-ai/awesome-deepseek-agent/blob/main/docs/deepcode.md) — DeepSeek's terminal assistant: Agent Skills locations (`~/.agents/skills`, `./.deepcode/skills`) and the `/` skill picker.
 - [Cline — Skills](https://docs.cline.bot/customization/skills) — Official Cline skill format: name/directory matching, description limit, token budgets, `docs/`-`templates/`-`scripts/` layout, locations, and global-over-project precedence.
+- [Claude Code — Extend agents with skills](https://code.claude.com/docs/en/agent-sdk/skills) — Anthropic's official Claude Code skills documentation: `SKILL.md` packaging, `.claude/skills/` discovery locations, and model-driven or slash-command invocation.
 - [Agent Skills — Client showcase](https://agentskills.io/home) — The open standard's overview of skills-compatible clients.
 
 ## Practical workflow

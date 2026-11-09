@@ -1,0 +1,36 @@
+# Cline Memory Bank and rules — kept local, not version-controlled
+.clinerules/
+memory-bank/
+
+# VS Code IDE artifacts
+.vscode/
+*.code-workspace
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg-link
+.venv/
+venv/
+.env
+.build/
+.dist/
+.pytest_cache/
+.coverage
+.pytest_cache/
+
+# Windows / macOS
+Thumbs.db
+.DS_Store
+*.lnk
+
+# Logs and temp
+*.log
+*.tmp
+*.temp
+~$*
+
+# Python packaging
+*.whl
