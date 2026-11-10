@@ -1,10 +1,9 @@
 ---
 name: programming-code-refactorer
-description: Use when restructuring existing code, applying design patterns,
-  reducing technical debt, improving code maintainability, or performing safe
-  incremental refactoring. The same verified, incremental workflow governs every
-  change, whether restructuring around the SOLID principles, eliminating dead
-  code, or optimizing performance from measurements.
+description: Use when existing code must be restructured without changing
+  behavior — from SOLID and design-pattern application to dead-code removal and
+  measured performance optimization. Applies the same verified, incremental
+  workflow to every c
 ---
 # Code Refactorer
 
@@ -40,7 +39,7 @@ This skill provides structured guidance for refactoring code safely and effectiv
 2. Change one thing at a time
 3. Be independently committable
 4. Be reversible if something goes wrong
-5. Be complete and runnable — no placeholder bodies in the code you write
+5. Be complete and runnable — no placeholder bodies in the code you write during a refactor step (teaching examples in `references/examples.md` are illustrative)
 
 ### Step-by-Step Process
 

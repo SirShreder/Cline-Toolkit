@@ -33,7 +33,7 @@ The audit is semantic, not mechanical: it requires the file's invariants derived
 - Bundled code lives in the layer matching the agent's use of it: code read to reason in `references/`, code copied verbatim into output in `assets/` (`templates/` in Cline layouts), executable code in `scripts/`; no package introduces a top-level folder outside the documented layouts.
 - An instruction to place content in a separate file names that file as a concrete relative path with a load trigger; an unspecified "separate file" pointer is a finding.
 - An enforcement mechanism (an analyzer, exit code, or harness) is named only in the layer that owns it; an environment-independent file states the principle, and the rule moves to the owning layer even when its principle reads as general.
-- Frontmatter descriptions contain no enumerations.
+- Frontmatter descriptions contain no summary enumerations; trigger phrasing is exempt.
 
 ## Reporting
 

@@ -1,9 +1,8 @@
 ---
 name: ai-core-rules
 description: Load for every task, programming or not. The assistant-level
-  behavioral core — how tools are used and skills are routed, how claims are
-  validated rather than hallucinated, how responses and clarifications are
-  shaped, where the boundaries of action lie, and how these rules are
+  behavioral core — the ground rules every other skill presupposes for how work
+  is done and kept honest and within bounds, and how the rules themselves are
   maintained.
 ---
 # AI Core Rules

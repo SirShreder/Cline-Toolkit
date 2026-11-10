@@ -1,12 +1,9 @@
 ---
 name: powershell-51-core
 description: Use this skill whenever writing, refactoring, or debugging Windows
-  PowerShell 5.1 code (.ps1, .psm1, .psd1 files) — version compatibility, syntax
-  constraints, error handling, strict mode, pipeline behavior, encoding,
-  comment-based help, localization, testing, or PSScriptAnalyzer compliance.
-  Holds the shared PowerShell 5.1 rules; sibling delta skills add the enterprise
-  and format-specific layers.
-disabled: true
+  PowerShell 5.1 code (.ps1, .psm1, .psd1 files) — it holds the shared rules
+  that keep such code correct on the legacy engine, whatever the task touches;
+  sibling delta skills add the enterprise and format-specific layers on top.
 ---
 # PowerShell 5.1 Core Rules
 
@@ -55,7 +52,7 @@ You are a PowerShell 5.1 specialist focused on Windows-only automation. You ensu
 - **Loop Choice:** `foreach ($item in $collection)` for fully materialized in-memory collections (speed); `ForEach-Object` for streaming or very large datasets (memory footprint).
 - **Pipeline Input:** Functions that consume data declare `[Parameter(ValueFromPipeline)]` or `[Parameter(ValueFromPipelineByPropertyName)]` on at least one parameter.
 - **Streaming (SC03):** Emit single records to the pipeline as they are generated — let objects flow or use `Write-Output`. Accumulating into an array and emitting once is only acceptable when the consumer genuinely needs a complete result set (e.g., aggregation); document the choice.
-- **Case-Insensitive, Case-Preserving (SC04):** Operations are case-insensitive by default but preserve the original case of pipeline data.
+- **Case-Insensitive, Case-Preserving (SC04):** Rely on PowerShell's case-insensitive matching for lookups, and preserve the original case of pipeline data in output — never normalize or re-case data that passes through the pipeline.
 - **`Process {}` Block:** Return objects inside `Process {}`, not `Begin {}` or `End {}` (PoshCode).
 - **`return` Keyword:** Valid PS 5.1 syntax; may be used for clarity or early exit. Prefer placing objects on their own line for pipeline streaming.
 - **One Object Type:** Output one kind of object at a time; mixed types break table formatting (PoshCode).
@@ -68,7 +65,7 @@ You are a PowerShell 5.1 specialist focused on Windows-only automation. You ensu
 ## 4. Idempotency & Config/Data Stores
 
 - **Idempotency Rule:** All infrastructure, file system, registry, and configuration changes must be strictly idempotent ("Check-and-Act"): verify the desired state before changing anything, so re-running is safe and produces no duplicates or errors.
-- **Format-Specific Rules:** Registry properties, INI, XML, CSV, JSON, PSD1, environment variables, and Clixml each have PS 5.1-specific rules — see the `powershell-51-config-data` skill. Do not restate them here.
+- **Format-Specific Rules:** Registry properties, INI, XML, CSV, JSON, PSD1, environment variables, and Clixml each have PS 5.1-specific rules — see the `powershell-51-config-data` skill when it is installed; when it is absent, fall back to the .NET and cmdlet documentation in `references/msdocs.md`. Do not restate them here.
 
 ## 5. Documentation
 
@@ -81,10 +78,10 @@ You are a PowerShell 5.1 specialist focused on Windows-only automation. You ensu
 
 - **Two Blank Lines Between Functions:** Surround function and class definitions with two blank lines.
 - **End File with Blank Line:** One blank line at the end of each `.ps1` / `.psm1`.
-- **No Trailing Whitespace:** Lines must not end with whitespace.
+- **No Trailing Whitespace:** Lines must not end with whitespace (project style choice — no PoshCode rule ID applies).
 - **Splatting Over Backticks:** Use splatting and implied line continuation (inside parentheses, brackets, braces); never backtick continuation.
 - **Single Space Around Parameters and Operators:** One space around parameter names, comparison/math/assignment operators; no spaces inside parentheses or square brackets.
-- **No Semicolons:** No semicolon line terminators.
+- **No Semicolons:** No semicolon line terminators (project style choice — no PoshCode rule ID applies).
 - **Block Comments Indented:** Indent `<# ... #>` to the level of the code documented, with `#` and a single space at the start of each line.
 
 ## 7. Structured Logs
@@ -108,12 +105,12 @@ You are a PowerShell 5.1 specialist focused on Windows-only automation. You ensu
 
 ## 10. Testing & Quality Gates
 
-- **Pester Tests:** State-changing scripts and modules ship Pester tests meeting the minimum testing bar defined in `programming-rules` Section 3 (Quality Gates); a concrete domain instance: a `Set-` function with `-WhatIf`, and with `ShouldProcess` declined. Match the Pester version installed in the target environment (3/4/5 syntax differs; stock Windows 10 / Windows Server 2016 and later ships Pester 3.4.0 — v3 syntax, `Should Be` without the dash).
+- **Pester Tests:** State-changing scripts and modules ship Pester tests — the minimum bar is the happy path plus the failure path, with test expectations stated before the code is written; a concrete domain instance: a `Set-` function with `-WhatIf`, and with `ShouldProcess` declined. Match the Pester version installed in the target environment (3/4/5 syntax differs; stock Windows 10 / Windows Server 2016 and later ships Pester 3.4.0 — v3 syntax, `Should Be` without the dash).
 - **Test isolation:** Never touch real machine state in tests — use `TestDrive:` for temporary files (Pester v3+) and `TestRegistry:` for registry tests (Pester v5+); save and restore any process-wide state a test changes. Mock external boundaries (network, native executables, the file system), never the function under test.
-- **CI test runs must fail closed:** In CI use Pester v5 `New-PesterConfiguration` with `Run.Exit = $true` so a failing run produces a non-zero exit code; a test run whose verdict is a printed summary instead of the exit code is not a gate (per `ai-core-rules` Section 6).
+- **CI test runs must fail closed:** In CI use Pester v5 `New-PesterConfiguration` with `Run.Exit = $true` so a failing run produces a non-zero exit code; a test run whose verdict is a printed summary instead of the exit code is not a gate — the harness must exit non-zero on failure.
 - **Static Analysis (CI Enforcement):** Run `Invoke-ScriptAnalyzer` on all scripts and modules as a commit/CI gate, not only manually; address all Warning and Error severity rules. Recommended rules: `PSUseApprovedVerbs`, `PSUseSingularNouns`, `PSAvoidUsingWriteHost`, `PSProvideCommentHelp`, `PSUseDeclaredVarsMoreThanAssignments`, `AvoidUsingPositionalParameters`, `AvoidUsingCmdletAliases`.
 - **No Write-Host:** Never use `Write-Host` for application logic or data output — `Write-Verbose` for operational tracing, `Write-Warning` for non-fatal anomalies (PSScriptAnalyzer `PSAvoidUsingWriteHost`).
-- **Parser validation harnesses (fail-closed):** When validating syntax with `[System.Management.Automation.Language.Parser]::ParseFile` / `ParseInput`, pre-initialize both out-variables (`$tokens = $null; $parseErrors = $null`) before passing them as `[ref]` — under the mandatory `Set-StrictMode -Version 2.0`, `[ref]` applied to a non-existent variable throws `NonExistingVariableReference` and the parse never executes. After the call, fail the run when `$parseErrors.Count -gt 0`: print the messages and exit with a non-zero code. Never emit a per-item "OK" for an item that produced errors, and never swallow the exception in an empty catch — per `ai-core-rules` Section 6, a harness that errors on an item is broken and its success lines are void.
+- **Parser validation harnesses (fail-closed):** When validating syntax with `[System.Management.Automation.Language.Parser]::ParseFile` / `ParseInput`, pre-initialize both out-variables (`$tokens = $null; $parseErrors = $null`) before passing them as `[ref]` — under the mandatory `Set-StrictMode -Version 2.0`, `[ref]` applied to a non-existent variable throws `NonExistingVariableReference` and the parse never executes. After the call, fail the run when `$parseErrors.Count -gt 0`: print the messages and exit with a non-zero code. Never emit a per-item "OK" for an item that produced errors, and never swallow the exception in an empty catch — a harness that errors on an item is broken, and its success lines are void.
 - **Dry-run under Windows PowerShell 5.1:** Verify runtime behavior and cmdlet availability with `powershell.exe -NoProfile -NonInteractive -File <script>`; `powershell.exe` is Windows PowerShell 5.1 on every host where it is installed, and its `-Version` switch only starts legacy engine modes 2.0 and 3.0 — it cannot select 5.1. Never verify with `pwsh` (PowerShell 7+). A dry-run result is authoritative over static analysis.
 
 ## 11. Professional Resources & Community

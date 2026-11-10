@@ -1,10 +1,9 @@
 ---
 name: programming-code-review
-description: "Perform thorough code review — checks correctness, security,
-  performance, readability, test coverage, and documentation parity. Gives
-  actionable feedback ranked by severity. This skill is read-only: it never
-  writes or modifies code. Use it when auditing pull requests, establishing
-  review standards, or validating changes before or after refactoring."
+description: "Perform thorough, read-only code review of code changes:
+  severity-ranked findings across each dimension the change touches, and a
+  verdict on whether the change may merge. Use when code changes must be
+  reviewed or audited before merging, or when review standards are established."
 ---
 # Code Review
 

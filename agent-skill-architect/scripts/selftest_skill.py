@@ -30,6 +30,7 @@ Fixture map (fixture name -> pinned behavior):
     block-scalar-name     parser: '|' block scalar folds
     block-scalar-strip    parser: '|-' block scalar folds
     folded-scalar        parser: '>' folded scalar folds
+    folded-scalar-strip  parser: '>-' folded strip indicator folds
     indent-indicator      parser: '|2' accepted, indicator digits ignored
     quoted-description    parser: double-quoted scalar
     single-quoted         parser: single-quoted scalar
@@ -208,6 +209,16 @@ def build_folded_scalar(d):
           "name: folded-scalar\n"
           "description: >\n"
           "  Trigger for folded scalars.\n"
+          "---\n\n"
+          "# Body\n")
+
+
+def build_folded_strip(d):
+    write(os.path.join(d, "SKILL.md"),
+          "---\n"
+          "name: folded-scalar-strip\n"
+          "description: >-\n"
+          "  Trigger for the folded strip indicator.\n"
           "---\n\n"
           "# Body\n")
 
@@ -449,6 +460,8 @@ case("block-scalar-name", 0, build_block_scalar_name,
 case("block-scalar-strip", 0, build_block_scalar_strip,
      out_has=("VALID: skill package passes",), err_lacks=("WARNING",))
 case("folded-scalar", 0, build_folded_scalar,
+     out_has=("VALID: skill package passes",), err_lacks=("WARNING",))
+case("folded-scalar-strip", 0, build_folded_strip,
      out_has=("VALID: skill package passes",), err_lacks=("WARNING",))
 case("indent-indicator", 0, build_indent_indicator,
      out_has=("VALID: skill package passes",), err_lacks=("WARNING",))

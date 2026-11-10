@@ -7,27 +7,43 @@ TypeScript code examples referenced from `SKILL.md`.
 ```typescript
 // ❌ God class doing everything
 class UserService {
-  createUser(data) { /* ... */ }
-  sendWelcomeEmail(user) { /* ... */ }
-  generateReport(userId) { /* ... */ }
-  syncToCRM(user) { /* ... */ }
+  createUser(data) {
+    return { id: data.email, ...data };
+  }
+  sendWelcomeEmail(user) {
+    return `Welcome, ${user.name}!`;
+  }
+  generateReport(userId) {
+    return `Usage report for ${userId}`;
+  }
+  syncToCRM(user) {
+    return { contact: user.email, source: 'app' };
+  }
 }
 
 // ✅ Each class has one responsibility
 class UserService {
-  createUser(data) { /* ... */ }
+  createUser(data) {
+    return { id: data.email, ...data };
+  }
 }
 
 class EmailService {
-  sendWelcomeEmail(user) { /* ... */ }
+  sendWelcomeEmail(user) {
+    return `Welcome, ${user.name}!`;
+  }
 }
 
 class ReportService {
-  generateReport(userId) { /* ... */ }
+  generateReport(userId) {
+    return `Usage report for ${userId}`;
+  }
 }
 
 class CRMService {
-  syncUser(user) { /* ... */ }
+  syncUser(user) {
+    return { contact: user.email, source: 'app' };
+  }
 }
 
 ```
@@ -96,8 +112,15 @@ class Shape {
   area(): number { throw new Error('Not implemented'); }
 }
 
-class Rectangle extends Shape { /* independent width/height */ }
-class Square extends Shape { /* single side */ }
+class Rectangle extends Shape {
+  area(): number { return this.width * this.height; }
+  constructor(public width = 0, public height = 0) {}
+}
+
+class Square extends Shape {
+  area(): number { return this.side * this.side; }
+  constructor(public side = 0) {}
+}
 
 ```
 ## Interface Segregation Principle (ISP)
@@ -112,7 +135,7 @@ interface Worker {
 
 // Robot forced to implement eat() and sleep()
 class Robot implements Worker {
-  work() { /* ... */ }
+  work() { console.log('Processing batch'); }
   eat() { throw new Error('Robots do not eat'); }
   sleep() { throw new Error('Robots do not sleep'); }
 }
@@ -123,13 +146,13 @@ interface Eatable { eat(): void; }
 interface Sleepable { sleep(): void; }
 
 class Robot implements Workable {
-  work() { /* ... */ }
+  work() { console.log('Processing batch'); }
 }
 
 class Human implements Workable, Eatable, Sleepable {
-  work() { /* ... */ }
-  eat() { /* ... */ }
-  sleep() { /* ... */ }
+  work() { console.log('Writing code'); }
+  eat() { console.log('Eating lunch'); }
+  sleep() { console.log('Sleeping 8 hours'); }
 }
 
 ```
@@ -141,7 +164,11 @@ class OrderService {
   private emailService = new SMTPEmailService();
 
   placeOrder(order) {
-    // ... order logic
+    if (!order.items || order.items.length === 0) {
+      throw new Error('Order must contain at least one item');
+    }
+    order.total = order.items.reduce(
+      (sum, item) => sum + item.price * item.quantity, 0);
     this.emailService.sendConfirmation(order);
   }
 }
@@ -155,8 +182,12 @@ class OrderService {
   constructor(private emailService: EmailService) {}
 
   placeOrder(order) {
-    // ... order logic
-    this.emailService.send(order.email, 'Order Confirmed', '...');
+    if (!order.items || order.items.length === 0) {
+      throw new Error('Order must contain at least one item');
+    }
+    order.total = order.items.reduce(
+      (sum, item) => sum + item.price * item.quantity, 0);
+    this.emailService.send(order.email, 'Order Confirmed', `Total: ${order.total}`);
   }
 }
 
