@@ -1,9 +1,8 @@
 ---
 name: programming-code-review
-description: "Perform thorough, read-only code review of code changes:
-  severity-ranked findings across each dimension the change touches, and a
-  verdict on whether the change may merge. Use when code changes must be
-  reviewed or audited before merging, or when review standards are established."
+description: Perform thorough, read-only code review of code changes. Use when
+  code changes must be reviewed or audited before merging, or when review
+  standards are established.
 ---
 # Code Review
 
