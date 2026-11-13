@@ -1,9 +1,6 @@
-# Cline Memory Bank and rules — kept local, not version-controlled
-.clinerules/
-.cline/
-memory-bank/
+﻿
 
-# VS Code IDE artifacts
+
 .vscode/
 *.code-workspace
 
@@ -35,3 +32,6 @@ Thumbs.db
 
 # Python packaging
 *.whl
+.clinerules/
+.cline/
+memory-bank/
